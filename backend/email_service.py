@@ -1,21 +1,28 @@
 import os
 import logging
 import threading
-import resend
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 logger = logging.getLogger("email_service")
 
-RESEND_API_KEY = os.getenv("RESEND_API_KEY", "re_Ts8rrhVJ_FWwyac99uGybngH6M1qoFUBU")
-FROM_EMAIL = "Zero Trust Security <onboarding@resend.dev>"
+SMTP_HOST = "smtp.gmail.com"
+SMTP_PORT = 465  # SSL — works on Render (port 587 is blocked)
+SMTP_USER = os.getenv("SMTP_USER", "libroflow8@gmail.com")
+SMTP_PASS = os.getenv("SMTP_PASS", "gdkuniqahwdmenpq")
 
 
 def send_email(to_email: str, subject: str, message: str, otp: str = None, link: str = None, link_label: str = "Open Dashboard"):
     """
-    Sends an email via Resend API in a background thread so it never blocks the API.
+    Sends email via Gmail SMTP SSL (port 465) in a background thread.
     """
     def _send():
         try:
-            resend.api_key = RESEND_API_KEY
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = f"Zero Trust Security <{SMTP_USER}>"
+            msg["To"] = to_email
 
             otp_block = ""
             if otp:
@@ -75,15 +82,15 @@ def send_email(to_email: str, subject: str, message: str, otp: str = None, link:
             if link:
                 plain += f"\n\n{link_label}: {link}"
 
-            resend.Emails.send({
-                "from": FROM_EMAIL,
-                "to": [to_email],
-                "subject": subject,
-                "html": html,
-                "text": plain,
-            })
+            msg.attach(MIMEText(plain, "plain"))
+            msg.attach(MIMEText(html, "html"))
 
-            logger.info(f"Email sent via Resend to {to_email}")
+            # Use SMTP_SSL (port 465) instead of STARTTLS (port 587)
+            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as server:
+                server.login(SMTP_USER, SMTP_PASS)
+                server.sendmail(SMTP_USER, to_email, msg.as_string())
+
+            logger.info(f"Email sent to {to_email}")
 
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {e}")

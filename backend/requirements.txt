@@ -10,4 +10,3 @@ requests
 python-dotenv
 python-jose[cryptography]
 gunicorn
-resend
