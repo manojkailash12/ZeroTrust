@@ -179,48 +179,6 @@ class UpdateProfileRequest(BaseModel):
 
 # ================= ADMIN CREATE (setup endpoint) =================
 
-class CreateAdminRequest(BaseModel):
-    username: str
-    password: str
-    email: str
-    mobile: str
-    setup_secret: str  # must match env var ADMIN_SETUP_SECRET
-
-@app.post("/admin/create-admin")
-async def create_admin(data: CreateAdminRequest):
-    setup_secret = os.getenv("ADMIN_SETUP_SECRET", "zero-trust-setup-2024")
-    if data.setup_secret != setup_secret:
-        raise HTTPException(403, "Invalid setup secret")
-
-    existing = users_collection.find_one({"username": data.username})
-    if existing:
-        users_collection.update_one(
-            {"username": data.username},
-            {"$set": {
-                "password": pwd.hash(data.password),
-                "email": data.email,
-                "mobile": data.mobile,
-                "role": "admin",
-                "status": "active",
-            }}
-        )
-        logger.info(f"Admin '{data.username}' updated via API")
-        return {"message": f"Admin '{data.username}' updated successfully"}
-    else:
-        users_collection.insert_one({
-            "username": data.username,
-            "password": pwd.hash(data.password),
-            "email": data.email,
-            "mobile": data.mobile,
-            "role": "admin",
-            "status": "active",
-            "created_at": datetime.now(IST)
-        })
-        logger.info(f"Admin '{data.username}' created via API")
-        return {"message": f"Admin '{data.username}' created successfully"}
-
-
-
 @app.post("/register")
 async def register(data: RegisterRequest):
     try:
