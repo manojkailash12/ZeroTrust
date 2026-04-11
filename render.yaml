@@ -10,10 +10,8 @@ services:
         sync: false
       - key: JWT_SECRET_KEY
         generateValue: true
-      - key: SMTP_USER
-        value: "libroflow8@gmail.com"
-      - key: SMTP_PASS
-        sync: false
+      - key: RESEND_API_KEY
+        value: "re_Ts8rrhVJ_FWwyac99uGybngH6M1qoFUBU"
       - key: ADMIN_EMAIL
         value: "admin@zerotrust.com"
       - key: FRONTEND_URL

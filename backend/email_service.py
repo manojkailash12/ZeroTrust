@@ -1,29 +1,22 @@
 import os
 import logging
 import threading
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import requests
 
 logger = logging.getLogger("email_service")
 
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 465  # SSL — works on Render (port 587 is blocked)
-SMTP_USER = os.getenv("SMTP_USER", "libroflow8@gmail.com")
-SMTP_PASS = os.getenv("SMTP_PASS", "gdkuniqahwdmenpq")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "re_Ts8rrhVJ_FWwyac99uGybngH6M1qoFUBU")
+FROM_EMAIL = "Zero Trust Security <onboarding@resend.dev>"
 
 
 def send_email(to_email: str, subject: str, message: str, otp: str = None, link: str = None, link_label: str = "Open Dashboard"):
     """
-    Sends email via Gmail SMTP SSL (port 465) in a background thread.
+    Sends email via Resend HTTP API — works on Render free plan (no SMTP ports needed).
+    NOTE: With onboarding@resend.dev, emails can only be sent to the account owner's email.
+    To send to any email, verify a custom domain at resend.com/domains.
     """
     def _send():
         try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"] = f"Zero Trust Security <{SMTP_USER}>"
-            msg["To"] = to_email
-
             otp_block = ""
             if otp:
                 otp_block = f"""
@@ -82,15 +75,26 @@ def send_email(to_email: str, subject: str, message: str, otp: str = None, link:
             if link:
                 plain += f"\n\n{link_label}: {link}"
 
-            msg.attach(MIMEText(plain, "plain"))
-            msg.attach(MIMEText(html, "html"))
+            response = requests.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {RESEND_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": FROM_EMAIL,
+                    "to": [to_email],
+                    "subject": subject,
+                    "html": html,
+                    "text": plain,
+                },
+                timeout=10
+            )
 
-            # Use SMTP_SSL (port 465) instead of STARTTLS (port 587)
-            with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as server:
-                server.login(SMTP_USER, SMTP_PASS)
-                server.sendmail(SMTP_USER, to_email, msg.as_string())
-
-            logger.info(f"Email sent to {to_email}")
+            if response.status_code in (200, 201):
+                logger.info(f"Email sent via Resend to {to_email}")
+            else:
+                logger.error(f"Resend API error {response.status_code}: {response.text}")
 
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {e}")
