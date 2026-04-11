@@ -1,0 +1,137 @@
+/* ===== AUTH PAGES ===== */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.auth-card {
+  background: rgba(255,255,255,0.97);
+  border-radius: 16px;
+  padding: 36px 32px;
+  width: 360px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  text-align: center;
+}
+
+.auth-logo {
+  font-size: 2.8rem;
+  margin-bottom: 8px;
+}
+
+.auth-card h2 {
+  margin: 0 0 4px;
+  font-size: 1.5rem;
+  color: #111827;
+  font-weight: 700;
+}
+
+.auth-sub {
+  color: #6b7280;
+  font-size: 0.88rem;
+  margin: 0 0 20px;
+}
+
+.auth-card input {
+  width: 100%;
+  padding: 11px 14px;
+  margin: 6px 0;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+.auth-card input:focus { border-color: #3b82f6; }
+
+.pwd-wrap {
+  position: relative;
+}
+.pwd-wrap input { padding-right: 40px; }
+.pwd-wrap span {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.mode-tabs button {
+  flex: 1;
+  padding: 9px;
+  border-radius: 8px;
+  border: 1.5px solid #e5e7eb;
+  background: white;
+  color: #6b7280;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.mode-tabs button.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.btn-auth {
+  width: 100%;
+  padding: 12px;
+  background: #1e3a8a;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background 0.2s;
+}
+.btn-auth:hover { background: #1e40af; }
+
+.auth-links {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.auth-links span {
+  color: #3b82f6;
+  font-size: 0.83rem;
+  cursor: pointer;
+  font-weight: 500;
+}
+.auth-links span:hover { text-decoration: underline; }
+
+.back-home {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  font-size: 0.85rem;
+  cursor: pointer;
+  margin-top: 12px;
+  padding: 4px;
+}
+.back-home:hover { color: #374151; }
+
+.auth-status {
+  margin-top: 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.btn-auth:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
