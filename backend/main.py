@@ -57,7 +57,7 @@ app = FastAPI(
 )
 
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "libroflow8@gmail.com")
-FRONTEND_BASE = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_BASE = os.getenv("FRONTEND_URL", "https://zero-trust-security-zqun.onrender.com")
 
 FRONTEND_ORIGIN = os.getenv("FRONTEND_URL", "*")
 

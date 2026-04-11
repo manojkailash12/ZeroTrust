@@ -17,7 +17,7 @@ services:
       - key: SMTP_PASS
         sync: false
       - key: FRONTEND_URL
-        sync: false
+        value: "https://zero-trust-security-zqun.onrender.com"
       - key: RENDER
         value: "true"
       - key: PYTHON_VERSION
