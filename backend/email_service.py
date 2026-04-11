@@ -1,33 +1,21 @@
-import smtplib
+import os
 import logging
 import threading
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import resend
 
 logger = logging.getLogger("email_service")
 
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 587
-SMTP_USER = "libroflow8@gmail.com"
-SMTP_PASS = "gdkuniqahwdmenpq"
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "re_Ts8rrhVJ_FWwyac99uGybngH6M1qoFUBU")
+FROM_EMAIL = "Zero Trust Security <onboarding@resend.dev>"
 
 
 def send_email(to_email: str, subject: str, message: str, otp: str = None, link: str = None, link_label: str = "Open Dashboard"):
     """
-    Sends an email via Gmail SMTP in a background thread so it never blocks the API.
+    Sends an email via Resend API in a background thread so it never blocks the API.
     """
     def _send():
         try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"] = f"Zero Trust Security <{SMTP_USER}>"
-            msg["To"] = to_email
-
-            plain = message
-            if otp:
-                plain += f"\n\nYour OTP: {otp}\n\nThis OTP is valid for 10 minutes. Do not share it with anyone."
-            if link:
-                plain += f"\n\n{link_label}: {link}"
+            resend.api_key = RESEND_API_KEY
 
             otp_block = ""
             if otp:
@@ -81,16 +69,21 @@ def send_email(to_email: str, subject: str, message: str, otp: str = None, link:
             </body></html>
             """
 
-            msg.attach(MIMEText(plain, "plain"))
-            msg.attach(MIMEText(html, "html"))
+            plain = message
+            if otp:
+                plain += f"\n\nYour OTP: {otp}\n\nValid for 10 minutes. Do not share it."
+            if link:
+                plain += f"\n\n{link_label}: {link}"
 
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-                server.ehlo()
-                server.starttls()
-                server.login(SMTP_USER, SMTP_PASS)
-                server.sendmail(SMTP_USER, to_email, msg.as_string())
+            resend.Emails.send({
+                "from": FROM_EMAIL,
+                "to": [to_email],
+                "subject": subject,
+                "html": html,
+                "text": plain,
+            })
 
-            logger.info(f"Email sent successfully to {to_email}")
+            logger.info(f"Email sent via Resend to {to_email}")
 
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {e}")

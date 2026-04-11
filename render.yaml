@@ -10,12 +10,10 @@ services:
         sync: false
       - key: JWT_SECRET_KEY
         generateValue: true
+      - key: RESEND_API_KEY
+        value: "re_Ts8rrhVJ_FWwyac99uGybngH6M1qoFUBU"
       - key: ADMIN_EMAIL
-        sync: false
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASS
-        sync: false
+        value: "admin@zerotrust.com"
       - key: FRONTEND_URL
         value: "https://zero-trust-security-zqun.onrender.com"
       - key: RENDER
