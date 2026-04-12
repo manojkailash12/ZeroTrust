@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import axios, { API } from '../../api'
+import axios, { API, authHeaders } from '../../api'
 import AdminLayout from '../../components/AdminLayout'
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from 'recharts'
 
@@ -10,13 +10,25 @@ export default function AdminDashboard() {
   const [alerts, setAlerts] = useState([])
   const [reports, setReports] = useState([])
   const [sessions, setSessions] = useState([])
+  const [unblocking, setUnblocking] = useState('')
 
   const load = () => {
-    // Fetch each independently so one failure doesn't wipe all data
     axios.get(`${API}/admin/users`).then(r => setUsers(r.data)).catch(() => {})
     axios.get(`${API}/admin/notifications`).then(r => setAlerts(r.data)).catch(() => {})
     axios.get(`${API}/admin/risk-reports`).then(r => setReports(r.data)).catch(() => {})
     axios.get(`${API}/admin/live-sessions`).then(r => setSessions(r.data)).catch(() => {})
+  }
+
+  const unblockUser = async (username) => {
+    setUnblocking(username)
+    try {
+      await axios.post(`${API}/admin/unblock/${username}`, {}, authHeaders())
+      load()
+    } catch {
+      // silent
+    } finally {
+      setUnblocking('')
+    }
   }
 
   useEffect(() => {
@@ -85,6 +97,7 @@ export default function AdminDashboard() {
                 <th>Risk Score</th>
                 <th>Status</th>
                 <th>Last Seen</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -110,6 +123,13 @@ export default function AdminDashboard() {
                   </td>
                   <td style={{ fontSize: '0.75rem', color: '#64748b' }}>
                     {s.last_seen ? new Date(s.last_seen).toLocaleTimeString() : '—'}
+                  </td>
+                  <td>
+                    {s.status === 'blocked' && (
+                      <button className="btn-sm btn-success" onClick={() => unblockUser(s.username)} disabled={unblocking === s.username}>
+                        {unblocking === s.username ? '⏳' : '🔓 Unblock'}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

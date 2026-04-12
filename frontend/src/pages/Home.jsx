@@ -1,8 +1,15 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import axios, { API } from '../api'
 import '../styles/home.css'
 
 export default function Home() {
   const nav = useNavigate()
+
+  // Warm up backend on home page load so login/register are instant
+  useEffect(() => {
+    axios.get(`${API}/ping`).catch(() => {})
+  }, [])
   return (
     <div className="home-root">
       <nav className="home-nav">

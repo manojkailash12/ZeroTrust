@@ -49,7 +49,10 @@ export default function UserProfile() {
 
   return (
     <UserLayout>
-      <h1 className="page-title">👤 My Profile</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+        <button className="btn-sm btn-primary-sm" onClick={() => nav('/dashboard')}>← Dashboard</button>
+        <h1 className="page-title" style={{ margin: 0 }}>👤 My Profile</h1>
+      </div>
 
       <div className="section-card" style={{ maxWidth: 520 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24 }}>

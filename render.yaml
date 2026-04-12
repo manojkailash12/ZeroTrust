@@ -10,8 +10,12 @@ services:
         sync: false
       - key: JWT_SECRET_KEY
         generateValue: true
-      - key: RESEND_API_KEY
-        value: "re_Ts8rrhVJ_FWwyac99uGybngH6M1qoFUBU"
+      - key: BREVO_API_KEY
+        sync: false
+      - key: FROM_EMAIL
+        value: "libroflow8@gmail.com"
+      - key: FROM_NAME
+        value: "Zero Trust Security"
       - key: ADMIN_EMAIL
         value: "admin@zerotrust.com"
       - key: FRONTEND_URL

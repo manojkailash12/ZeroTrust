@@ -5,18 +5,21 @@ import requests
 
 logger = logging.getLogger("email_service")
 
-RESEND_API_KEY = os.getenv("RESEND_API_KEY", "re_Ts8rrhVJ_FWwyac99uGybngH6M1qoFUBU")
-FROM_EMAIL = "Zero Trust Security <onboarding@resend.dev>"
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
+# FROM_EMAIL must be a verified sender in your Brevo account (Senders & IPs section)
+FROM_EMAIL = os.getenv("FROM_EMAIL", "libroflow8@gmail.com")
+FROM_NAME = os.getenv("FROM_NAME", "Zero Trust Security")
 
 
 def send_email(to_email: str, subject: str, message: str, otp: str = None, link: str = None, link_label: str = "Open Dashboard"):
     """
-    Sends email via Resend HTTP API — works on Render free plan (no SMTP ports needed).
-    NOTE: With onboarding@resend.dev, emails can only be sent to the account owner's email.
-    To send to any email, verify a custom domain at resend.com/domains.
+    Sends email via Brevo (Sendinblue) HTTP API — works on Render free plan.
     """
     def _send():
         try:
+            if not BREVO_API_KEY:
+                logger.error("BREVO_API_KEY is not set — email not sent")
+                return
             otp_block = ""
             if otp:
                 otp_block = f"""
@@ -76,25 +79,27 @@ def send_email(to_email: str, subject: str, message: str, otp: str = None, link:
                 plain += f"\n\n{link_label}: {link}"
 
             response = requests.post(
-                "https://api.resend.com/emails",
+                "https://api.brevo.com/v3/smtp/email",
                 headers={
-                    "Authorization": f"Bearer {RESEND_API_KEY}",
+                    "api-key": BREVO_API_KEY,
                     "Content-Type": "application/json",
                 },
                 json={
-                    "from": FROM_EMAIL,
-                    "to": [to_email],
+                    "sender": {"name": FROM_NAME, "email": FROM_EMAIL},
+                    "to": [{"email": to_email}],
                     "subject": subject,
-                    "html": html,
-                    "text": plain,
+                    "htmlContent": html,
+                    "textContent": plain,
                 },
                 timeout=10
             )
 
             if response.status_code in (200, 201):
-                logger.info(f"Email sent via Resend to {to_email}")
+                logger.info(f"✅ Email sent via Brevo to {to_email}")
             else:
-                logger.error(f"Resend API error {response.status_code}: {response.text}")
+                logger.error(f"❌ Brevo API error {response.status_code}: {response.text}")
+                logger.error(f"   Sender: {FROM_EMAIL} | To: {to_email} | Subject: {subject}")
+                logger.error("   Tip: Make sure FROM_EMAIL is a verified sender in your Brevo account (Settings → Senders & IPs)")
 
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {e}")

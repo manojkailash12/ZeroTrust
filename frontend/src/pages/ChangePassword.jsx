@@ -46,7 +46,7 @@ export default function ChangePassword() {
         <button className="btn-auth" onClick={change} disabled={loading}>
           {loading ? '⏳ Changing...' : 'Change Password'}
         </button>
-        {!forced && <button className="back-home" onClick={() => nav(-1)}>← Back</button>}
+        {!forced && <button className="back-home" onClick={() => nav('/dashboard')}>← Back to Dashboard</button>}
         {status && <p className="auth-status">{status}</p>}
       </div>
     </div>

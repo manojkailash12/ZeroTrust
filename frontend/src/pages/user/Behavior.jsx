@@ -35,7 +35,10 @@ export default function Behavior() {
 
   return (
     <UserLayout>
-      <h1 className="page-title">📡 Behavior Logging</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+        <button className="btn-sm btn-primary-sm" onClick={() => nav('/dashboard')}>← Dashboard</button>
+        <h1 className="page-title" style={{ margin: 0 }}>📡 Behavior Logging</h1>
+      </div>
 
       <div className="section-card">
         <h3>Quick Log Presets</h3>

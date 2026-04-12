@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import axios, { API } from '../../api'
+import axios, { API, authHeaders } from '../../api'
 import AdminLayout from '../../components/AdminLayout'
 
 export default function AdminNotifications() {
@@ -8,6 +8,7 @@ export default function AdminNotifications() {
   const [alerts, setAlerts] = useState([])
   const [status, setStatus] = useState('')
   const [sending, setSending] = useState({})
+  const [unblocking, setUnblocking] = useState({})
 
   const load = () => axios.get(`${API}/admin/notifications`).then(r => setAlerts(r.data)).catch(() => nav('/login'))
 
@@ -16,13 +17,26 @@ export default function AdminNotifications() {
   const sendKey = async (username) => {
     setSending(s => ({ ...s, [username]: true }))
     try {
-      await axios.post(`${API}/admin/send-unblock-key/${username}`)
-      setStatus(`✅ Unblock key sent to ${username}'s email. User must enter it to regain access.`)
+      await axios.post(`${API}/admin/send-unblock-key/${username}`, {}, authHeaders())
+      setStatus(`✅ Unblock key sent to ${username}'s email.`)
       load()
     } catch (err) {
       setStatus(`❌ ${err.response?.data?.detail || 'Failed to send key'}`)
     } finally {
       setSending(s => ({ ...s, [username]: false }))
+    }
+  }
+
+  const unblockUser = async (username) => {
+    setUnblocking(s => ({ ...s, [username]: true }))
+    try {
+      await axios.post(`${API}/admin/unblock/${username}`, {}, authHeaders())
+      setStatus(`✅ ${username} has been unblocked.`)
+      load()
+    } catch (err) {
+      setStatus(`❌ ${err.response?.data?.detail || 'Failed to unblock'}`)
+    } finally {
+      setUnblocking(s => ({ ...s, [username]: false }))
     }
   }
 
@@ -71,15 +85,22 @@ export default function AdminNotifications() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
                   <button
-                    className="btn-sm btn-primary-sm"
+                    className="btn-sm btn-success"
+                    onClick={() => unblockUser(a.username)}
+                    disabled={unblocking[a.username]}
+                  >
+                    {unblocking[a.username] ? '⏳' : '🔓 Unblock Now'}
+                  </button>
+                  <button
+                    className="btn-sm btn-warning"
                     onClick={() => sendKey(a.username)}
                     disabled={sending[a.username]}
-                    title="Send a 6-digit unblock key to user's email — user must enter it to unblock"
+                    title="Send a 6-digit unblock key to user's email"
                   >
-                    {sending[a.username] ? '⏳ Sending...' : '📧 Send Unblock Key'}
+                    {sending[a.username] ? '⏳ Sending...' : '📧 Send Key'}
                   </button>
                   <span style={{ fontSize: '0.72rem', color: '#64748b', textAlign: 'center' }}>
-                    User enters key to unblock
+                    or send key for self-service
                   </span>
                 </div>
               </div>

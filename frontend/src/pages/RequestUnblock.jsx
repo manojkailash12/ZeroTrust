@@ -6,11 +6,22 @@ import '../styles/auth.css'
 export default function RequestUnblock() {
   const nav = useNavigate()
   const [step, setStep] = useState('request')
-  const [username, setUsername] = useState('')
+  const [username, setUsername] = useState(localStorage.getItem('username') || '')
   const [reason, setReason] = useState('')
   const [key, setKey] = useState('')
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // If user is logged in, go back to their dashboard; otherwise go to login
+  const goBack = () => {
+    const token = localStorage.getItem('token')
+    const role  = localStorage.getItem('role')
+    if (token) {
+      nav(role === 'admin' ? '/admin' : '/dashboard')
+    } else {
+      nav('/login')
+    }
+  }
 
   const submitRequest = async () => {
     if (!username || !reason) return setStatus('⚠ All fields required')
@@ -115,7 +126,9 @@ export default function RequestUnblock() {
           </>
         )}
 
-        <button className="back-home" onClick={() => nav('/login')}>← Back to Login</button>
+        <button className="back-home" onClick={goBack}>
+          {localStorage.getItem('token') ? '← Back to Dashboard' : '← Back to Login'}
+        </button>
         {status && <p className="auth-status">{status}</p>}
       </div>
     </div>

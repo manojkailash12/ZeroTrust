@@ -42,7 +42,10 @@ export default function RiskAnalysis() {
 
   return (
     <UserLayout>
-      <h1 className="page-title">⚠️ Risk Analysis</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+        <button className="btn-sm btn-primary-sm" onClick={() => nav('/dashboard')}>← Dashboard</button>
+        <h1 className="page-title" style={{ margin: 0 }}>⚠️ Risk Analysis</h1>
+      </div>
 
       <div className="section-card">
         <h3>Run Risk Analysis</h3>

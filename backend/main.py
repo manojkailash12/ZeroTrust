@@ -104,11 +104,15 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 @app.on_event("startup")
 async def startup_db_client():
     try:
+        # Pre-warm the MongoDB connection so first request is fast
+        client.admin.command('ping')
         users_collection.create_index("username", unique=True)
         users_collection.create_index("email", unique=True)
-        logger.info("Database unique indexes verified/created.")
+        behavior_collection.create_index([("user_id", 1), ("timestamp", -1)])
+        risk_collection.create_index([("user_id", 1), ("timestamp", -1)])
+        logger.info("✅ Database connected and indexes verified.")
     except Exception as e:
-        logger.warning(f"Could not enforce unique indexes on startup (duplicates may already exist manually clean DB): {e}")
+        logger.warning(f"Startup DB warning: {e}")
 
 from fastapi.responses import JSONResponse
 import traceback
@@ -123,6 +127,11 @@ async def global_exception_handler(request, exc):
     )
 
 pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# ================= PING (keepalive / health check) =================
+@app.get("/ping")
+async def ping():
+    return {"status": "ok"}
 
 # Frontend is served at / by the catch-all route at the bottom
 
@@ -288,16 +297,41 @@ async def login(data: LoginRequest):
 
 # ================= LOG BEHAVIOR =================
 
+def get_location_from_ip(ip: str) -> str:
+    """Resolve approximate city/country from IP using free ip-api.com"""
+    try:
+        if ip in ("127.0.0.1", "::1", "localhost"):
+            return "Local"
+        r = requests.get(f"http://ip-api.com/json/{ip}?fields=city,country,status", timeout=2)
+        data = r.json()
+        if data.get("status") == "success":
+            return f"{data.get('city', '')}, {data.get('country', '')}".strip(", ")
+    except Exception:
+        pass
+    return "Unknown"
+
 @app.post("/log-behavior")
 async def log_behavior(data: BehaviorRequest, request: Request, current_user: dict = Depends(get_current_user)):
-    ip = request.client.host
+    # Get real client IP (handle proxies/Render)
+    forwarded = request.headers.get("X-Forwarded-For")
+    ip = forwarded.split(",")[0].strip() if forwarded else request.client.host
+
+    # Auto-resolve location if not provided or generic
+    location = data.location
+    if not location or location in ("Active Session", "Unknown", ""):
+        location = get_location_from_ip(ip)
+
     behavior_collection.insert_one({
-        **data.dict(),
-        "ip": ip,
-        "username": current_user["username"],
-        "timestamp": datetime.now(IST)
+        "user_id":      data.user_id,
+        "username":     current_user["username"],
+        "location":     location,
+        "device":       data.device,
+        "browser":      data.browser,
+        "ip":           ip,
+        "access_speed": data.access_speed,
+        "timestamp":    datetime.now(IST)
     })
-    return {"message": "Behavior logged"}
+    return {"message": "Behavior logged", "location": location, "ip": ip}
 
 # ================= ANALYZE RISK =================
 
@@ -320,14 +354,21 @@ async def analyze_risk(user_id: str, current_user: dict = Depends(get_current_us
 
     speeds = np.array([[l["access_speed"]] for l in logs])
 
-    # Only flag as anomaly if majority of logs are suspicious (contamination=0.1 = 10%)
-    anomaly_labels = list(
-        IsolationForest(contamination=0.1, random_state=42)
-        .fit_predict(speeds)
-    )
-    anomaly_count = anomaly_labels.count(-1)
-    # Require at least 30% of logs to be anomalous before flagging High risk
-    anomaly_ratio = anomaly_count / len(logs)
+    # Use a low contamination so normal browsing speeds don't get flagged
+    # IsolationForest needs enough variance to detect real anomalies
+    speed_std = float(np.std(speeds))
+    speed_mean = float(np.mean(speeds))
+
+    # If all speeds are very similar (std < 0.5), it's normal behavior — skip anomaly detection
+    if speed_std < 0.5:
+        anomaly_ratio = 0.0
+    else:
+        anomaly_labels = list(
+            IsolationForest(contamination=0.05, random_state=42)
+            .fit_predict(speeds)
+        )
+        anomaly_count = anomaly_labels.count(-1)
+        anomaly_ratio = anomaly_count / len(logs)
 
     texts = [f'{l["location"]} {l["device"]}' for l in logs]
     tfidf = TfidfVectorizer().fit_transform(texts)
@@ -336,7 +377,8 @@ async def analyze_risk(user_id: str, current_user: dict = Depends(get_current_us
     user = users_collection.find_one({"_id": ObjectId(user_id)})
 
     # High risk: needs BOTH high anomaly ratio AND low similarity
-    if anomaly_ratio >= 0.4 and similarity < 0.3:
+    # Raised thresholds to avoid false positives from normal usage
+    if anomaly_ratio >= 0.5 and similarity < 0.2:
         risk_score = random.randint(80, 95)
 
         risk_collection.insert_one({
@@ -375,8 +417,8 @@ async def analyze_risk(user_id: str, current_user: dict = Depends(get_current_us
 
         return {"risk_level": "High", "risk_score": risk_score, "action": "Blocked"}
 
-    # Medium risk: moderate anomaly ratio OR moderate similarity drop
-    if anomaly_ratio >= 0.2 or similarity < 0.5:
+    # Medium risk: moderate anomaly ratio AND some similarity drop (avoid false positives)
+    if anomaly_ratio >= 0.3 and similarity < 0.6:
         risk_score = random.randint(40, 65)
         risk_collection.insert_one({
             "user_id": user_id,

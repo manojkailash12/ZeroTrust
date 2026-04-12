@@ -1,6 +1,7 @@
 fastapi
 uvicorn[standard]
-pymongo
+pymongo[srv]
+motor
 passlib[bcrypt]
 bcrypt==4.0.1
 numpy
@@ -10,3 +11,4 @@ requests
 python-dotenv
 python-jose[cryptography]
 gunicorn
+dnspython

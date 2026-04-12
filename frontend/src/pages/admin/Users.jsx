@@ -12,6 +12,7 @@ export default function AdminUsers() {
   const [status, setStatus] = useState('')
   const [sending, setSending] = useState('')
   const [saving, setSaving] = useState(false)
+  const [unblocking, setUnblocking] = useState('')
 
   const load = () => axios.get(`${API}/admin/users`, authHeaders()).then(r => setUsers(r.data)).catch(() => nav('/login'))
   useEffect(() => { load() }, [])
@@ -25,6 +26,20 @@ export default function AdminUsers() {
       setStatus('❌ Failed to send key')
     } finally {
       setSending('')
+    }
+  }
+
+  const unblockUser = async (username) => {
+    if (!window.confirm(`Unblock ${username}?`)) return
+    setUnblocking(username)
+    try {
+      await axios.post(`${API}/admin/unblock/${username}`, {}, authHeaders())
+      setStatus(`✅ ${username} has been unblocked`)
+      load()
+    } catch {
+      setStatus('❌ Failed to unblock user')
+    } finally {
+      setUnblocking('')
     }
   }
 
@@ -87,9 +102,14 @@ export default function AdminUsers() {
                 <td style={{ display: 'flex', gap: 6 }}>
                   <button className="btn-sm btn-primary-sm" onClick={() => openEdit(u)}>✏️ Edit</button>
                   {u.status === 'blocked' && (
-                    <button className="btn-sm btn-warning" onClick={() => sendKey(u.username)} disabled={sending === u.username}>
-                      {sending === u.username ? '⏳' : '📧 Send Key'}
-                    </button>
+                    <>
+                      <button className="btn-sm btn-success" onClick={() => unblockUser(u.username)} disabled={unblocking === u.username}>
+                        {unblocking === u.username ? '⏳' : '🔓 Unblock'}
+                      </button>
+                      <button className="btn-sm btn-warning" onClick={() => sendKey(u.username)} disabled={sending === u.username}>
+                        {sending === u.username ? '⏳' : '📧 Send Key'}
+                      </button>
+                    </>
                   )}
                 </td>
               </tr>
