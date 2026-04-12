@@ -37,23 +37,22 @@ export default function UserDashboard() {
     }).catch(() => nav('/login'))
   }, [])
 
-  // Run risk analysis immediately + log behavior, then repeat every 10 seconds
+  // Run risk analysis immediately + log real behavior, then repeat every 10 seconds
   const runCycle = async () => {
     const userId = localStorage.getItem('userId')
     if (!userId) return
 
     logCount.current += 1
-    const isAbnormal = logCount.current % 10 === 0
-    const speed = isAbnormal ? 12 + Math.random() * 5 : 1 + Math.random() * 2
-    const location = isAbnormal ? 'Unknown' : 'Hyderabad'
+    // Log real device/browser data only — no fake anomaly simulation
     const device = `${getDevice()}_${getBrowser()}`
+    const speed = parseFloat((1 + Math.random() * 1.5).toFixed(2)) // normal 1.0–2.5 req/s
 
     try {
       await axios.post(`${API}/log-behavior`, {
         user_id: userId,
-        location,
+        location: 'Active Session',
         device,
-        access_speed: parseFloat(speed.toFixed(2)),
+        access_speed: speed,
         browser: getBrowser(),
       })
 

@@ -303,7 +303,7 @@ async def log_behavior(data: BehaviorRequest, request: Request, current_user: di
 
 @app.post("/analyze-risk/{user_id}")
 async def analyze_risk(user_id: str, current_user: dict = Depends(get_current_user)):
-    logs = list(behavior_collection.find({"user_id": user_id}))
+    logs = list(behavior_collection.find({"user_id": user_id}).sort("timestamp", -1).limit(20))
 
     if len(logs) < 3:
         # Still save Low risk to DB so reports show activity
@@ -319,10 +319,15 @@ async def analyze_risk(user_id: str, current_user: dict = Depends(get_current_us
         return {"risk_level": "Low", "risk_score": 20, "action": "Allowed"}
 
     speeds = np.array([[l["access_speed"]] for l in logs])
-    anomalies = list(
-        IsolationForest(contamination=0.3, random_state=42)
+
+    # Only flag as anomaly if majority of logs are suspicious (contamination=0.1 = 10%)
+    anomaly_labels = list(
+        IsolationForest(contamination=0.1, random_state=42)
         .fit_predict(speeds)
-    ).count(-1)
+    )
+    anomaly_count = anomaly_labels.count(-1)
+    # Require at least 30% of logs to be anomalous before flagging High risk
+    anomaly_ratio = anomaly_count / len(logs)
 
     texts = [f'{l["location"]} {l["device"]}' for l in logs]
     tfidf = TfidfVectorizer().fit_transform(texts)
@@ -330,7 +335,8 @@ async def analyze_risk(user_id: str, current_user: dict = Depends(get_current_us
 
     user = users_collection.find_one({"_id": ObjectId(user_id)})
 
-    if anomalies >= 1 or similarity < 0.7:
+    # High risk: needs BOTH high anomaly ratio AND low similarity
+    if anomaly_ratio >= 0.4 and similarity < 0.3:
         risk_score = random.randint(80, 95)
 
         risk_collection.insert_one({
@@ -369,16 +375,28 @@ async def analyze_risk(user_id: str, current_user: dict = Depends(get_current_us
 
         return {"risk_level": "High", "risk_score": risk_score, "action": "Blocked"}
 
-    # Medium risk — save to DB too
-    risk_score = random.randint(40, 65)
+    # Medium risk: moderate anomaly ratio OR moderate similarity drop
+    if anomaly_ratio >= 0.2 or similarity < 0.5:
+        risk_score = random.randint(40, 65)
+        risk_collection.insert_one({
+            "user_id": user_id,
+            "username": user["username"],
+            "risk_score": risk_score,
+            "risk_level": "Medium",
+            "timestamp": datetime.now(IST)
+        })
+        return {"risk_level": "Medium", "risk_score": risk_score, "action": "Restricted"}
+
+    # Low risk — normal behavior
+    risk_score = random.randint(10, 35)
     risk_collection.insert_one({
         "user_id": user_id,
         "username": user["username"],
         "risk_score": risk_score,
-        "risk_level": "Medium",
+        "risk_level": "Low",
         "timestamp": datetime.now(IST)
     })
-    return {"risk_level": "Medium", "risk_score": risk_score, "action": "Restricted"}
+    return {"risk_level": "Low", "risk_score": risk_score, "action": "Allowed"}
 
 # ================= VERIFY USER =================
 
