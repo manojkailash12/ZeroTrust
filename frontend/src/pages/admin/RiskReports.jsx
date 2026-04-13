@@ -37,9 +37,8 @@ export default function RiskReports() {
 
   return (
     <AdminLayout>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+      <div style={{ marginBottom: 4 }}>
         <h1 className="page-title" style={{ margin: 0 }}>📊 Risk Reports</h1>
-        <span style={{ fontSize: '0.78rem', color: '#4ade80' }}>● Auto-refreshing every 10s</span>
       </div>
 
       <div className="stats-grid">
@@ -113,7 +112,9 @@ export default function RiskReports() {
                         <span style={{ fontSize: '0.85rem' }}>{r.risk_score}</span>
                       </div>
                     </td>
-                    <td style={{ fontSize: '0.78rem', color: '#64748b' }}>{new Date(r.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
+                    <td style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                      {new Date(r.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+                    </td>
                   </tr>
                 ))}
               </tbody>

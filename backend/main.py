@@ -563,7 +563,15 @@ async def get_notifications(current_user: dict = Depends(get_current_user)):
 async def get_risk_reports(current_user: dict = Depends(get_current_user)):
     if current_user.get("role") != "admin":
         raise HTTPException(403, "Admin access required")
-    return list(risk_collection.find({}, {"_id": 0}).sort("timestamp", -1))
+    reports = list(risk_collection.find({}, {"_id": 0}).sort("timestamp", -1))
+    # Ensure timestamps have IST timezone info for correct frontend display
+    for r in reports:
+        if "timestamp" in r and r["timestamp"] is not None:
+            ts = r["timestamp"]
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=IST)
+            r["timestamp"] = ts.isoformat()
+    return reports
 
 @app.get("/admin/users")
 async def get_all_users(current_user: dict = Depends(get_current_user)):
@@ -580,7 +588,6 @@ async def get_all_users(current_user: dict = Depends(get_current_user)):
 async def get_live_sessions(current_user: dict = Depends(get_current_user)):
     if current_user.get("role") != "admin":
         raise HTTPException(403, "Admin access required")
-    # Get latest behavior log per user
     pipeline = [
         {"$sort": {"timestamp": -1}},
         {"$group": {
@@ -595,11 +602,14 @@ async def get_live_sessions(current_user: dict = Depends(get_current_user)):
         }}
     ]
     sessions = list(behavior_collection.aggregate(pipeline))
-    # Attach risk score and status
     result = []
     for s in sessions:
         user = users_collection.find_one({"_id": ObjectId(s["_id"])}) if s["_id"] else None
         latest_risk = risk_collection.find_one({"user_id": s["_id"]}, sort=[("timestamp", -1)])
+        # Convert last_seen to ISO string with UTC offset so frontend shows correct time
+        last_seen = s.get("last_seen")
+        if last_seen and last_seen.tzinfo is None:
+            last_seen = last_seen.replace(tzinfo=IST)
         result.append({
             "user_id": s["_id"],
             "username": s.get("username", ""),
@@ -608,7 +618,7 @@ async def get_live_sessions(current_user: dict = Depends(get_current_user)):
             "browser": s.get("browser", ""),
             "ip": s.get("ip", ""),
             "access_speed": s.get("access_speed", 0),
-            "last_seen": s.get("last_seen"),
+            "last_seen": last_seen.isoformat() if last_seen else None,
             "status": user["status"] if user else "unknown",
             "risk_score": latest_risk["risk_score"] if latest_risk else 0,
             "risk_level": latest_risk["risk_level"] if latest_risk else "Low",

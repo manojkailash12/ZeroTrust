@@ -81,7 +81,6 @@ export default function AdminDashboard() {
       <div className="section-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <h3 style={{ margin: 0 }}>📡 Live User Monitoring</h3>
-          <span style={{ fontSize: '0.78rem', color: '#4ade80' }}>● Auto-refreshing every 10s</span>
         </div>
         {sessions.length === 0 ? (
           <p style={{ color: '#64748b', fontSize: '0.88rem' }}>No active user sessions yet.</p>
@@ -122,7 +121,7 @@ export default function AdminDashboard() {
                     </span>
                   </td>
                   <td style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                    {s.last_seen ? new Date(s.last_seen).toLocaleTimeString() : '—'}
+                    {s.last_seen ? new Date(s.last_seen).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) : '—'}
                   </td>
                   <td>
                     {s.status === 'blocked' && (
