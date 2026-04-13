@@ -21,7 +21,6 @@ export default function UserDashboard() {
   const session = getSession()
   const [profile, setProfile] = useState({ username: session.username, status: session.status || 'active' })
   const [risk, setRisk] = useState(null)
-  const [lastCapture, setLastCapture] = useState(null)
   const intervalRef = useRef(null)
 
   // Load profile once — render instantly from cache, refresh silently
@@ -39,11 +38,10 @@ export default function UserDashboard() {
     const device = `${getDevice()}_${getBrowser()}`
     const browser = getBrowser()
     const speed = parseFloat((0.5 + Math.random() * 4.5).toFixed(2))
-    const ts = new Date()
 
     try {
       // Log behavior — backend resolves real IP + location
-      const logRes = await axios.post(`${API}/log-behavior`, {
+      await axios.post(`${API}/log-behavior`, {
         user_id: userId,
         location: '',   // backend auto-resolves from IP
         device,
@@ -51,16 +49,7 @@ export default function UserDashboard() {
         browser,
       })
 
-      // Capture what was actually logged
-      setLastCapture({
-        userId,
-        location: logRes.data?.location || '—',
-        device,
-        browser,
-        speed,
-        timestamp: ts.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
-      })
-
+      // Capture what was actually logged — used by admin live sessions
       const res = await axios.post(`${API}/analyze-risk/${userId}`, {})
       setRisk(res.data)
 
@@ -148,29 +137,6 @@ export default function UserDashboard() {
               🚨 High risk detected! Account blocked. Redirecting...
             </div>
           )}
-        </div>
-      )}
-
-      {/* Behavior Capture Details */}
-      {lastCapture && (
-        <div className="section-card">
-          <h3>📡 Last Behavior Capture</h3>
-          <table className="data-table">
-            <thead>
-              <tr><th>Field</th><th>Value</th></tr>
-            </thead>
-            <tbody>
-              <tr><td style={{ color: '#94a3b8' }}>User ID</td><td>{lastCapture.userId}</td></tr>
-              <tr><td style={{ color: '#94a3b8' }}>Location</td><td>{lastCapture.location}</td></tr>
-              <tr><td style={{ color: '#94a3b8' }}>Device Type</td><td>{lastCapture.device}</td></tr>
-              <tr><td style={{ color: '#94a3b8' }}>Browser</td><td>{lastCapture.browser}</td></tr>
-              <tr><td style={{ color: '#94a3b8' }}>Access Speed</td><td>{lastCapture.speed} req/s</td></tr>
-              <tr><td style={{ color: '#94a3b8' }}>Timestamp</td><td>{lastCapture.timestamp}</td></tr>
-            </tbody>
-          </table>
-          <div style={{ marginTop: 10, fontSize: '0.78rem', color: '#475569' }}>
-            Every login interaction is logged for AI analysis · Updates every 10s
-          </div>
         </div>
       )}
 
