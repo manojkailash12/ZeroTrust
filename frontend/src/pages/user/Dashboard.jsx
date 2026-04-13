@@ -21,7 +21,6 @@ export default function UserDashboard() {
   const session = getSession()
   const [profile, setProfile] = useState({ username: session.username, status: session.status || 'active' })
   const [risk, setRisk] = useState(null)
-  const [autoOn, setAutoOn] = useState(true)
   const [lastCapture, setLastCapture] = useState(null)
   const intervalRef = useRef(null)
 
@@ -67,7 +66,6 @@ export default function UserDashboard() {
 
       if (res.data.risk_level === 'High') {
         clearInterval(intervalRef.current)
-        setAutoOn(false)
         localStorage.setItem('status', 'blocked')
         setTimeout(() => nav('/request-unblock'), 1500)
       }
@@ -81,11 +79,10 @@ export default function UserDashboard() {
   }
 
   useEffect(() => {
-    if (!autoOn) { clearInterval(intervalRef.current); return }
     runCycle()
     intervalRef.current = setInterval(runCycle, 10000)
     return () => clearInterval(intervalRef.current)
-  }, [autoOn])
+  }, [])
 
   const riskColor = r => r === 'High' ? '#ef4444' : r === 'Medium' ? '#f59e0b' : '#22c55e'
   const riskBadge = r => r === 'High' ? 'badge-red' : r === 'Medium' ? 'badge-yellow' : 'badge-green'
@@ -94,14 +91,7 @@ export default function UserDashboard() {
     <UserLayout>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
         <h1 className="page-title" style={{ margin: 0 }}>👋 Welcome, {profile.username}</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: '0.8rem', color: autoOn ? '#4ade80' : '#94a3b8' }}>
-            {autoOn ? '🟢 Auto-monitoring ON' : '⚪ Auto-monitoring OFF'}
-          </span>
-          <button className={`btn-sm ${autoOn ? 'btn-danger' : 'btn-success'}`} onClick={() => setAutoOn(v => !v)}>
-            {autoOn ? 'Stop' : 'Start'}
-          </button>
-        </div>
+        <span style={{ fontSize: '0.8rem', color: '#4ade80' }}>🟢 Auto-monitoring ON</span>
       </div>
 
       {/* Stats */}
