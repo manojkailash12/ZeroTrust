@@ -133,18 +133,6 @@ pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 async def ping():
     return {"status": "ok"}
 
-# ================= GET BLOCKED EMAIL (for login key flow) =================
-@app.post("/get-blocked-email")
-async def get_blocked_email(data: GetBlockedEmailRequest):
-    user = users_collection.find_one({"username": data.username})
-    if not user or user.get("status") != "blocked":
-        raise HTTPException(404, "Blocked user not found")
-    # Return masked email for display, full email for API use
-    email = user["email"]
-    parts = email.split("@")
-    masked = parts[0][:2] + "***@" + parts[1] if len(parts) == 2 else email
-    return {"email": email, "masked_email": masked}
-
 # Frontend is served at / by the catch-all route at the bottom
 
 # ================= MODELS =================
@@ -197,6 +185,21 @@ class VerifyUnblockKeyRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str
+
+class UpdateProfileRequest(BaseModel):
+    email: str = None
+    mobile: str = None
+
+# ================= GET BLOCKED EMAIL (for login key flow) =================
+@app.post("/get-blocked-email")
+async def get_blocked_email(data: GetBlockedEmailRequest):
+    user = users_collection.find_one({"username": data.username})
+    if not user or user.get("status") != "blocked":
+        raise HTTPException(404, "Blocked user not found")
+    email = user["email"]
+    parts = email.split("@")
+    masked = parts[0][:2] + "***@" + parts[1] if len(parts) == 2 else email
+    return {"email": email, "masked_email": masked}
 
 class UpdateProfileRequest(BaseModel):
     email: str = None
