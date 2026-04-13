@@ -167,15 +167,15 @@ class ResetPasswordRequest(BaseModel):
     new_password: str
 
 class UnblockRequestModel(BaseModel):
-    username: str
-    reason: str
+    email: str
+    reason: str = ""
 
 class AdminSendKeyRequest(BaseModel):
     username: str
     key: str
 
 class VerifyUnblockKeyRequest(BaseModel):
-    username: str
+    email: str
     key: str
 
 class ChangePasswordRequest(BaseModel):
@@ -657,21 +657,20 @@ async def send_unblock_key(username: str, current_user: dict = Depends(get_curre
 
 @app.post("/verify-unblock-key")
 async def verify_unblock_key(data: VerifyUnblockKeyRequest):
-    user = users_collection.find_one({"username": data.username})
+    user = users_collection.find_one({"email": data.email})
     if not user:
-        raise HTTPException(404, "User not found")
+        raise HTTPException(404, "No account found with that email")
     if user.get("unblock_key") != data.key:
         raise HTTPException(400, "Invalid unblock key")
     if datetime.now(IST) > user.get("unblock_key_expiry", datetime.min.replace(tzinfo=IST)):
         raise HTTPException(400, "Unblock key has expired")
 
     users_collection.update_one(
-        {"username": data.username},
+        {"email": data.email},
         {"$set": {"status": "active", "force_password_change": True},
          "$unset": {"unblock_key": "", "unblock_key_expiry": "", "blocked_at": ""}}
     )
-    admin_notifications.delete_many({"username": data.username})
-    # Keep behavior and risk history for audit trail
+    admin_notifications.delete_many({"username": user["username"]})
 
     access_token = create_access_token(data={"sub": user["username"]})
     return {
@@ -691,38 +690,57 @@ async def verify_unblock_key(data: VerifyUnblockKeyRequest):
 
 @app.post("/request-unblock")
 async def request_unblock(data: UnblockRequestModel):
-    user = users_collection.find_one({"username": data.username})
+    user = users_collection.find_one({"email": data.email})
     if not user:
-        raise HTTPException(404, "User not found")
+        raise HTTPException(404, "No account found with that email")
     if user.get("status") != "blocked":
         raise HTTPException(400, "Account is not blocked")
 
-    # Store request
+    username = user["username"]
+
+    # Generate and store unblock key immediately — no admin approval needed
+    key = str(random.randint(100000, 999999))
+    users_collection.update_one(
+        {"email": data.email},
+        {"$set": {"unblock_key": key, "unblock_key_expiry": datetime.now(IST) + timedelta(minutes=30)}}
+    )
+
+    # Store request in notifications for admin visibility
     admin_notifications.update_one(
-        {"username": data.username},
+        {"username": username},
         {"$set": {
             "unblock_requested": True,
-            "unblock_reason": data.reason,
+            "unblock_reason": data.reason or "No reason provided",
             "unblock_requested_at": datetime.now(IST)
         }},
         upsert=True
     )
 
-    # Notify admin via email
+    # Send key directly to user's email
     try:
-        admin_dashboard_link = f"{FRONTEND_BASE}/admin"
+        send_email(
+            data.email,
+            "Your Unblock Key – Zero Trust Security",
+            f"Hello {username},\n\nYour unblock key has been generated. Use it to restore access to your account:",
+            otp=key
+        )
+    except Exception as mail_err:
+        logger.warning(f"Unblock key email failed: {mail_err}")
+
+    # Also notify admin
+    try:
         admin_email = os.getenv("ADMIN_EMAIL", "libroflow8@gmail.com")
         send_email(
             admin_email,
-            f"Unblock Request from {data.username}",
-            f"User '{data.username}' has requested to unblock their account.\n\nReason: {data.reason}\n\nPlease review and take action from the admin dashboard.",
-            link=admin_dashboard_link,
+            f"Unblock Request from {username}",
+            f"User '{username}' ({data.email}) has requested to unblock their account.\n\nReason: {data.reason or 'No reason provided'}\n\nAn unblock key has been sent to the user automatically.",
+            link=f"{FRONTEND_BASE}/admin",
             link_label="Go to Admin Dashboard"
         )
     except Exception as mail_err:
-        logger.warning(f"Admin unblock request email failed: {mail_err}")
+        logger.warning(f"Admin notification email failed: {mail_err}")
 
-    return {"message": "Unblock request submitted. Admin will review shortly."}
+    return {"message": "Unblock key sent to your email. Please check your inbox."}
 
 # ================= CHANGE PASSWORD =================
 
