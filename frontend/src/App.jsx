@@ -43,7 +43,7 @@ export default function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/verify" element={<Verify />} />
       <Route path="/forgot" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/reset-password" element={<Navigate to="/forgot" replace />} />
       <Route path="/request-unblock" element={<RequestUnblock />} />
 
       {/* Auth required */}

@@ -171,6 +171,7 @@ class VerifyRequest(BaseModel):
     token: str
 
 class ForgotPasswordRequest(BaseModel):
+    username: str = ""
     email: str
 
 class ResetPasswordRequest(BaseModel):
@@ -520,10 +521,13 @@ async def admin_unblock(username: str, current_user: dict = Depends(get_current_
 
 @app.post("/forgot-password")
 async def forgot_password(data: ForgotPasswordRequest):
+    # Find user by email
     user = users_collection.find_one({"email": data.email})
     if not user:
-        logger.warning(f"Forgot password attempt for non-existent email: {data.email}")
-        raise HTTPException(404, "User not found")
+        raise HTTPException(404, "No account found with that email")
+    # If username provided, verify it matches
+    if data.username and user.get("username") != data.username:
+        raise HTTPException(404, "Username and email do not match")
 
     otp = str(random.randint(100000, 999999))
     expiry = datetime.now(IST) + timedelta(minutes=10)
