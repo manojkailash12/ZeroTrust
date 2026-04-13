@@ -76,13 +76,13 @@ export default function UserDashboard() {
       if (res.data.risk_level === 'High') {
         clearInterval(intervalRef.current)
         localStorage.setItem('status', 'blocked')
-        setTimeout(() => nav('/request-unblock'), 1500)
+        setTimeout(() => nav('/login'), 1500)
       }
     } catch (err) {
       if (err?.response?.status === 403) {
         clearInterval(intervalRef.current)
         localStorage.setItem('status', 'blocked')
-        nav('/request-unblock')
+        nav('/login')
       }
     }
   }
