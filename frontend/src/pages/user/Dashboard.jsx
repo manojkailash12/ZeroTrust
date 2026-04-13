@@ -98,9 +98,8 @@ export default function UserDashboard() {
 
   return (
     <UserLayout>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+      <div style={{ marginBottom: 22 }}>
         <h1 className="page-title" style={{ margin: 0 }}>👋 Welcome, {profile.username}</h1>
-        <span style={{ fontSize: '0.8rem', color: '#4ade80' }}>🟢 Auto-monitoring ON</span>
       </div>
 
       {/* Stats */}
