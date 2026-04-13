@@ -16,6 +16,23 @@ function getDevice() {
   return /Android|iPhone|iPad/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop'
 }
 
+// Resolve real location from client IP via ip-api.com (free, no key needed)
+// Cached in sessionStorage so it only fetches once per session
+async function getClientLocation() {
+  const cached = sessionStorage.getItem('userLocation')
+  if (cached) return cached
+  try {
+    const res = await fetch('http://ip-api.com/json/?fields=city,regionName,country,status', { signal: AbortSignal.timeout(3000) })
+    const data = await res.json()
+    if (data.status === 'success') {
+      const loc = [data.city, data.country].filter(Boolean).join(', ')
+      sessionStorage.setItem('userLocation', loc)
+      return loc
+    }
+  } catch {}
+  return 'Unknown'
+}
+
 export default function UserDashboard() {
   const nav = useNavigate()
   const session = getSession()
@@ -40,10 +57,13 @@ export default function UserDashboard() {
     const speed = parseFloat((0.5 + Math.random() * 4.5).toFixed(2))
 
     try {
-      // Log behavior — backend resolves real IP + location
+      // Resolve real location from client IP (cached after first call)
+      const location = await getClientLocation()
+
+      // Log behavior with real location
       await axios.post(`${API}/log-behavior`, {
         user_id: userId,
-        location: '',   // backend auto-resolves from IP
+        location,
         device,
         access_speed: speed,
         browser,

@@ -316,9 +316,9 @@ async def log_behavior(data: BehaviorRequest, request: Request, current_user: di
     forwarded = request.headers.get("X-Forwarded-For")
     ip = forwarded.split(",")[0].strip() if forwarded else request.client.host
 
-    # Auto-resolve location if not provided or generic
+    # Use frontend-provided location if available, otherwise fall back to IP lookup
     location = data.location
-    if not location or location in ("Active Session", "Unknown", ""):
+    if not location or location.strip() == '':
         location = get_location_from_ip(ip)
 
     behavior_collection.insert_one({
