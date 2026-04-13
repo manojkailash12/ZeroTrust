@@ -5,11 +5,11 @@ import '../styles/auth.css'
 
 export default function RequestUnblock() {
   const nav = useNavigate()
+  const accountStatus = localStorage.getItem('status') || ''
   const [step, setStep] = useState('request')
   const [email, setEmail] = useState(localStorage.getItem('email') || '')
   const [reason, setReason] = useState('')
   const [key, setKey] = useState('')
-  const [verifyEmail, setVerifyEmail] = useState(localStorage.getItem('email') || '')
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -23,13 +23,26 @@ export default function RequestUnblock() {
     }
   }
 
+  // If account is active (not blocked), show info screen
+  if (accountStatus === 'active') {
+    return (
+      <div className="auth-page">
+        <div className="auth-card" style={{ width: 420, textAlign: 'center' }}>
+          <div className="auth-logo">✅</div>
+          <h2 style={{ color: '#22c55e' }}>Account is Active</h2>
+          <p className="auth-sub">Your account is not blocked. No action is needed.</p>
+          <button className="btn-auth" onClick={goBack}>← Go to Dashboard</button>
+        </div>
+      </div>
+    )
+  }
+
   const submitRequest = async () => {
     if (!email) return setStatus('⚠ Email is required')
     setLoading(true)
     setStatus('')
     try {
       await axios.post(`${API}/request-unblock`, { email, reason })
-      setVerifyEmail(email)
       setStatus('✅ Unblock key sent to your email! Check your inbox.')
       setStep('verify')
     } catch (err) {
@@ -40,11 +53,11 @@ export default function RequestUnblock() {
   }
 
   const verifyKey = async () => {
-    if (!verifyEmail || !key) return setStatus('⚠ Enter your email and the key from email')
+    if (!key) return setStatus('⚠ Enter the key from your email')
     setLoading(true)
     setStatus('')
     try {
-      const res = await axios.post(`${API}/verify-unblock-key`, { email: verifyEmail, key })
+      const res = await axios.post(`${API}/verify-unblock-key`, { email, key })
       const d = res.data
       localStorage.setItem('token',    d.access_token)
       localStorage.setItem('userId',   d.user_id)
@@ -106,12 +119,6 @@ export default function RequestUnblock() {
         {step === 'verify' && (
           <>
             <p className="auth-sub">Enter the unblock key sent to your email.</p>
-            <input
-              placeholder="Your Email *"
-              type="email"
-              value={verifyEmail}
-              onChange={e => setVerifyEmail(e.target.value)}
-            />
             <input
               placeholder="Unblock Key (from email) *"
               value={key}
