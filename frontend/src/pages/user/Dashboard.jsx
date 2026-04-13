@@ -148,9 +148,6 @@ export default function UserDashboard() {
           <div className="risk-meter">
             <div className={`risk-fill risk-${risk.risk_level.toLowerCase()}`} style={{ width: `${risk.risk_score}%` }} />
           </div>
-          <div style={{ marginTop: 10, fontSize: '0.82rem', color: '#64748b' }}>
-            Auto-updates every 10s
-          </div>
           {risk.risk_level === 'High' && (
             <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(239,68,68,0.1)', borderRadius: 8, border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', fontSize: '0.88rem' }}>
               🚨 High risk detected! Account blocked. Redirecting...
